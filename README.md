@@ -9,7 +9,7 @@
 
 ## About This Project
 
-Routine Tracker adalah proyek Ujian Kenaikan Level (UKL) kelas XI semester 2 di SMK Telkom Sidoarjo. Aplikasi berbasis web ini membantu pengguna mengatur rutinitas harian, tidak hanya sebagai to-do list, tetapi juga dengan fitur tambahan untuk meningkatkan konsistensi dan produktivitas.
+Onward adalah proyek Ujian Kenaikan Level (UKL) kelas XI semester 2 di SMK Telkom Sidoarjo. Aplikasi bertema Routine Tracker berbasis web ini membantu pengguna mengatur rutinitas harian, tidak hanya sebagai to-do list, tetapi juga dengan fitur tambahan untuk meningkatkan konsistensi dan produktivitas.
 
 ## About Laravel
 
