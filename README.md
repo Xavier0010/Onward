@@ -7,6 +7,10 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## About This Project
+
+Onward adalah proyek Ujian Kenaikan Level (UKL) kelas XI semester 2 di SMK Telkom Sidoarjo. Aplikasi bertema Routine Tracker berbasis web ini membantu pengguna mengatur rutinitas harian, tidak hanya sebagai to-do list, tetapi juga dengan fitur tambahan untuk meningkatkan konsistensi dan produktivitas.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
