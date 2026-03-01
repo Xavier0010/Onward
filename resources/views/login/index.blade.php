@@ -19,7 +19,7 @@
     <p style="color:red">{{ session('error') }}</p>
 @endif
 
-<form method="POST">
+<form method="POST" action='/api/auth/login'>
     @csrf
 
     <input name="login" placeholder="Email or Username"><br><br>

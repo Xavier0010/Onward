@@ -15,7 +15,7 @@
     </div>
 @endif
 
-<form method="POST" action="/signup">
+<form method="POST" action="/api/auth/signup">
     @csrf
 
     <input name="username" placeholder="Username"><br><br>
