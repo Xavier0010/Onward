@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
+use App\Services\AchievementService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,9 @@ class AuthController extends Controller
 
         $user = User::create($validated);
         $token = $user->createToken("api_token")->plainTextToken;
+
+        $achievementService = new AchievementService;
+        $achievementService->check($user, 'register');
 
         return response()->json([
             "success" => true,

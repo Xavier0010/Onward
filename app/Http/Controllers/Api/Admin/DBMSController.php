@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Models\User;
+use App\Models\Todo;
+use App\Models\Achievement;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 class DBMSController extends Controller
 {
     protected $models = [
-        "users" => \App\Models\User::class,
-        // "todos" => \App\Models\Todo::class
+        "users" => User::class,
+        "todos" => Todo::class,
+        "achievements" => Achievement::class
     ];
 
     public function index($table) {
@@ -67,8 +70,8 @@ class DBMSController extends Controller
 
         return response()->json([
             "success" => true,
-            "data" => $item,
-            "message" => "New record in $model has been created successfully."
+            "message" => "New record in $model has been created successfully.",
+            "data" => $item
         ], 201);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Dom\Comment;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -17,7 +18,6 @@ class User extends Authenticatable
     protected $table = 'users';
     protected $primaryKey = 'id';
 
-    // Fields that can be mass-assigned
     protected $fillable = [
         'username',
         'email',
@@ -29,15 +29,17 @@ class User extends Authenticatable
         'role',
     ];
 
-    // Fields hidden in API responses
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    // Field casting
     protected $casts = [
-        'password' => 'hashed',   // Laravel automatically hashes passwords
+        'password' => 'hashed',
         'date_of_birth' => 'date',
     ];
+
+    public function todos() {
+        return $this->hasMany(Todo::class, 'user_id');
+    }
 }
