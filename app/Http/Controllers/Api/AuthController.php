@@ -7,14 +7,15 @@ use App\Services\AchievementService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function signup(Request $request) {
+    public function register(Request $request) {
                 
-        $validated = $request->validate([
-            "username" => "required|unique:users|min:6",
-            "email" => "required|email|unique:users",
+        $validator = validator($request->all(), [
+            "username" => "required|min:6",
+            "email" => "required|email",
             "password" => "required|min:8|confirmed",
             "first_name" => "required",
             "last_name" => "required",
@@ -22,13 +23,32 @@ class AuthController extends Controller
             "date_of_birth" => "required|date"
         ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                "success" => false,
+                "message" => "Validation failed!",
+                "errors" => $validator->errors()
+            ], 400);
+        }
+
+        $userExists = User::where('email', $request->email)->orWhere('username', $request->username)->exists();
+
+        if ($userExists) {
+            return response()->json([
+                "success" => false,
+                "message" => "User already exist!"
+            ], 409);
+        }
+
+        $validated = $validator->validated();
+
         $validated["password"] = Hash::make($validated["password"]);
 
         $user = User::create($validated);
         $token = $user->createToken("api_token")->plainTextToken;
 
         $achievementService = new AchievementService;
-        $achievementService->check($user, 'register');
+        $achievementService->check($user, 'registered');
 
         return response()->json([
             "success" => true,
@@ -74,15 +94,6 @@ class AuthController extends Controller
                 "token" => $token,
                 "role" => $role
             ]
-        ]);
-    }
-
-    public function logout(Request $request) {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json([
-            "success" => true,
-            "message" => "Logged out successfully!"
         ]);
     }
 }

@@ -12,6 +12,10 @@ class Todo extends Model
     protected $table = "todos";
     protected $primaryKey = 'id';
 
+    public const PRIORITY_LOW = 1;
+    public const PRIORITY_MEDIUM = 2;
+    public const PRIORITY_HIGH = 3;
+
     public const STATUS_PENDING = 1;
     public const STATUS_PROGRESS = 2;
     public const STATUS_COMPLETED = 3;

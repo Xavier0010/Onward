@@ -42,4 +42,13 @@ class User extends Authenticatable
     public function todos() {
         return $this->hasMany(Todo::class, 'user_id');
     }
+
+    public function achievements() {
+        return $this->belongsToMany(
+            Achievement::class,
+            'user_achievements',
+            'user_id',
+            'achievement_id'
+        )->withPivot('unlocked_at');
+    }
 }

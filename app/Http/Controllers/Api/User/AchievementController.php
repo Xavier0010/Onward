@@ -13,14 +13,17 @@ class AchievementController extends Controller
         $user = $request->user();
 
         $achievements = Achievement::all()->map(function($achievement) use ($user) {
-            $unlocked = UserAchievement::where('user_id', $user->id)->where('achievement_id', $achievement->id)->exists();
+            $unlocked = UserAchievement::where('user_id', $user->id)->where('achievement_id', $achievement->id)->first();
 
             return [
                 "id" => $achievement->id,
                 "name" => $achievement->name,
                 "description" => $achievement->description,
                 "icon" => $achievement->icon,
-                "unlocked" => $unlocked
+                "type" => $achievement->type,
+                "target_value" => $achievement->target_value,
+                "unlocked" => $unlocked ? true : false,
+                "earned_at" => $unlocked ? $unlocked->unlocked_at ?? $unlocked->created_at : null
             ];
         });
 

@@ -12,9 +12,8 @@ use App\Http\Controllers\Api\User\UserProfileController;
 use App\Http\Controllers\Api\User\UserTodoController;
 use App\Http\Controllers\Api\User\AchievementController;
 
-Route::post('/signup', [AuthController::class, 'signup']);
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 // Route::middleware('auth:sanctum', 'admin')->prefix('admin')->group(function() {
 //      Route::get('/dbms/{table}', [DBMSController::class, 'index']);

@@ -22,7 +22,7 @@ class AchievementService {
                 $currentValue = $user->streak_count;
                 break;
 
-            case 'register':
+            case 'registered':
                 $currentValue = 1;
                 break;
 

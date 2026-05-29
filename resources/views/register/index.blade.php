@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Onward</title>
+    <title>Register - Onward</title>
     <link rel="icon" type="image/png" href="{{ asset('OnwardLogo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
@@ -25,7 +25,7 @@
 
     <!-- Main Content -->
     <main class="flex-1 flex items-center justify-center p-4 pt-24 pb-12">
-        @livewire('login')
+        @livewire('register')
     </main>
 
     @livewireScripts
