@@ -47,6 +47,22 @@
             </div>
         </div>
 
+                        <header class="topbar">
+    <div class="date-display">
+        <span class="cal-icon">📅</span>
+        <span id="current-date">Day, Month, Date</span>
+</header>
+
+<script>
+    const dateEl = document.getElementById("current-date");
+
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const today = new Date().toLocaleDateString('id-ID', options);
+
+    dateEl.textContent = today;
+</script>
+
+
         {{-- ═══════════════════════════ MAIN CONTENT ═══════════════════════════ --}}
         <div class="db-main">
 
