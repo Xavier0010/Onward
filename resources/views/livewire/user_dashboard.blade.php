@@ -6,6 +6,22 @@
             <h1 class="db-header-title">Dashboard</h1>
         </header>
 
+        <style>
+body {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+</style>
 
         {{-- ═══════════════════════════ STAT CARDS ═══════════════════════════ --}}
         <div class="db-stats">
