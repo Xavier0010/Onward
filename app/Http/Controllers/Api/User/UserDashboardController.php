@@ -9,7 +9,7 @@ use App\Services\StreakService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
-class UserDashboardController extends Controller
+class hboardController extends Controller
 {
     public function index(Request $request) {
         $user = $request->user();

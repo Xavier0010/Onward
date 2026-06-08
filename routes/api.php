@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Admin\DBMSController;
 use App\Http\Controllers\Api\Admin\StatisticsController;
 
-use App\Http\Controllers\Api\User\UserDashboardController;
+use App\Http\Controllers\Api\User\hboardController;
 use App\Http\Controllers\Api\User\UserProfileController;
 use App\Http\Controllers\Api\User\UserTodoController;
 use App\Http\Controllers\Api\User\AchievementController;
@@ -37,7 +37,7 @@ Route::prefix('admin')->group(function() {
 
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function() {
-    Route::get('/dashboard', [UserDashboardController::class, 'index']);
+    Route::get('/dashboard', [hboardController::class, 'index']);
 
     Route::prefix('todo')->group(function() {
         Route::get('/', [UserTodoController::class, 'index']);

@@ -12,6 +12,28 @@
 
     @livewire('user-dashboard')
 
+    <header class="topbar">
+    <div class="date-display">
+        <span class="cal-icon">📅</span>
+        <span id="current-date">Day, Month, Date</span>
+    </div>
+
+    <div class="search-area">
+        <input 
+            type="search" 
+            id="search-input" 
+            placeholder="Search your task here!" 
+            aria-label="Search tasks"
+        >
+
+        <img 
+            src="{{ asset('assets/onward-logo.png') }}" 
+            alt="OnWard Logo" 
+            class="logo"
+        >
+    </div>
+</header>
+
     @livewireScripts
 </body>
 </html>
