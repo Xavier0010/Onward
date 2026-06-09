@@ -11,8 +11,12 @@ class StreakService {
             return $user->streak_count;
         }
 
-        if ($lastLogin === now()->subDay()->toDateString()) {
-            $user->streak_count += 1;
+        if ($lastLogin) {
+            $last = \Carbon\Carbon::parse($lastLogin)->startOfDay();
+            $now = now()->startOfDay();
+            if ($now->diffInDays($last) >= 1) {
+                $user->streak_count += 1;
+            }
         } else {
             $user->streak_count = 1;
         }

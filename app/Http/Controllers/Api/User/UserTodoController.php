@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\User;
 
 use App\Models\Todo;
 use App\Models\User;
+use App\Models\ActivityEvent;
+use App\Models\AppNotification;
 use App\Services\AchievementService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -61,6 +63,14 @@ class UserTodoController extends Controller
             "status" => $validated['status'],
         ]);
 
+        if ($request->hasFile('file')) {
+            $path = $request->file('file')->store('todos', 'public');
+            $todo->update([
+                'file_path' => $path,
+                'original_filename' => $request->file('file')->getClientOriginalName(),
+            ]);
+        }
+
         $achievementService = new AchievementService;
         $achievementService->check($user, 'tasks_created');
 
@@ -75,6 +85,8 @@ class UserTodoController extends Controller
         $user = $request->user();
         $todo = Todo::where("id", $id)->where("user_id", $user->id)->firstOrFail();
 
+        $wasNotCompleted = $todo->status != 3;
+
         $validated = $request->validate([
             "task" => "sometimes|string|max:255",
             "description" => "nullable|string",
@@ -84,16 +96,101 @@ class UserTodoController extends Controller
             "status" => "sometimes|in:1,2,3"
         ]);
 
+        if ($request->hasFile('file')) {
+            $path = $request->file('file')->store('todos', 'public');
+            $validated['file_path'] = $path;
+            $validated['original_filename'] = $request->file('file')->getClientOriginalName();
+        }
+
         $todo->update($validated);
 
-        if ($request->status == 3) {
+        // If task was just completed, log activity + notify friends
+        if ($wasNotCompleted && $request->status == 3) {
+            $todo->update(['completed_at' => now()]);
+
             $achievementService = new AchievementService;
             $achievementService->check($user, 'tasks_completed');
+
+            // Log activity event
+            ActivityEvent::create([
+                'user_id' => $user->id,
+                'type' => 'task_completed',
+                'data' => [
+                    'task_name' => $todo->task,
+                    'priority' => $todo->priority,
+                ],
+            ]);
+
+            // Notify friends
+            $friendIds = $user->getFriendIds();
+            foreach ($friendIds as $friendId) {
+                AppNotification::create([
+                    'user_id' => $friendId,
+                    'from_user_id' => $user->id,
+                    'type' => 'task_completed',
+                    'data' => [
+                        'message' => $user->first_name . ' completed "' . $todo->task . '"',
+                        'task_name' => $todo->task,
+                    ],
+                ]);
+            }
         }
 
         return response()->json([
             "success" => true,
             "message" => "Todo updated successfully!",
+            "data" => $todo
+        ]);
+    }
+
+    /**
+     * PUT /api/user/todo/{id}/toggle — Toggle task completion (used by Livewire)
+     */
+    public function toggle(Request $request, $id) {
+        $user = $request->user();
+        $todo = Todo::where("id", $id)->where("user_id", $user->id)->firstOrFail();
+
+        if ($todo->status == 3) {
+            // Uncomplete
+            $todo->status = 1;
+            $todo->completed_at = null;
+            $todo->save();
+        } else {
+            // Complete
+            $todo->status = 3;
+            $todo->completed_at = now();
+            $todo->save();
+
+            $achievementService = new AchievementService;
+            $achievementService->check($user, 'tasks_completed');
+
+            // Log activity event
+            ActivityEvent::create([
+                'user_id' => $user->id,
+                'type' => 'task_completed',
+                'data' => [
+                    'task_name' => $todo->task,
+                    'priority' => $todo->priority,
+                ],
+            ]);
+
+            // Notify friends
+            $friendIds = $user->getFriendIds();
+            foreach ($friendIds as $friendId) {
+                AppNotification::create([
+                    'user_id' => $friendId,
+                    'from_user_id' => $user->id,
+                    'type' => 'task_completed',
+                    'data' => [
+                        'message' => $user->first_name . ' completed "' . $todo->task . '"',
+                    ],
+                ]);
+            }
+        }
+
+        return response()->json([
+            "success" => true,
+            "message" => "Task toggled!",
             "data" => $todo
         ]);
     }

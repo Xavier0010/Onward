@@ -19,7 +19,7 @@ return new class extends Migration
 
             $table->string('first_name');
             $table->string('last_name');
-            $table->enum('sex', ['male', 'female']);
+            $table->enum('gender', ['male', 'female']);
             $table->date('date_of_birth');
             
             $table->rememberToken();

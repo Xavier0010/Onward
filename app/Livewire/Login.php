@@ -37,11 +37,19 @@ class Login extends Component
             Auth::login($user);
             session()->regenerate();
             
-            return redirect('/user/profile');
+            if ($user->role === User::ROLE_ADMIN) {
+                return redirect('/admin/dashboard');
+            }
+            
+            return redirect('/user/dashboard');
         }
 
         $data = json_decode($response->getContent(), true);
-        $this->addError('login_field', $data['message'] ?? 'Credentials incorrect or not registered!');
+        if ($response->status() === 404) {
+            $this->addError('login_field', $data['message'] ?? 'Credentials incorrect or not registered!');
+        } else {
+            $this->addError('password', $data['message'] ?? 'Credentials incorrect or not registered!');
+        }
     }
 
     public function render()

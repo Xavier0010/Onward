@@ -11,15 +11,15 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1a1a1a;
+            background-color: #0f1117;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col relative text-white">
     <!-- Header with Logo -->
-    <header class="p-6 absolute top-0 left-0 w-full flex items-center justify-between">
+    <header class="p-6 absolute top-0 left-0 w-full flex items-center justify-between z-50">
         <div class="flex items-center gap-2">
-            <img src="{{ asset('OnwardLogo.png') }}" alt="Onward Logo" class="h-20 w-auto object-contain">
+            <a href="/"><img src="{{ asset('OnwardLogo.png') }}" alt="Onward Logo" class="h-20 w-auto object-contain"></a>
         </div>
     </header>
 

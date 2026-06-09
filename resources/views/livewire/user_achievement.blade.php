@@ -1,5 +1,5 @@
 <div class="db-layout">
-    <x-sidebar />
+    <x-sidebar active="achievements"/>
 
     <div class="db-root">
         <div class="db-top-fixed">
@@ -58,7 +58,7 @@
             <div class="db-showcase-container">
                 <div class="db-showcase-wrapper">
                     @foreach ($categories as $category)
-                        <div>
+                        <div class="db-category-container">
                             {{-- Category header + divider --}}
                             <div class="db-category-header">
                                 <h3 class="db-category-title">{{ $category['label'] }}</h3>
@@ -75,7 +75,7 @@
                                         {{-- Icon --}}
                                         <span class="db-badge-icon">
                                             @if(str_ends_with($badge['icon'], '.png') || str_ends_with($badge['icon'], '.jpg') || str_ends_with($badge['icon'], '.svg'))
-                                                <img src="{{ asset('AchievementBadges/' . ltrim($badge['icon'], '/')) }}" alt="{{ $badge['name'] }}" style="width:2.2rem;height:2.2rem;object-fit:contain;">
+                                                <img src="{{ asset('AchievementBadges/' . ltrim($badge['icon'], '/')) }}" alt="{{ $badge['name'] }}" style="width:10rem;height:10rem;object-fit:contain;">
                                             @else
                                                 {{ $badge['icon'] ?: '🏆' }}
                                             @endif
@@ -150,8 +150,8 @@
 }
 
 .db-logo {
-    width: 44px;
-    height: 44px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
 }
 
@@ -188,7 +188,7 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: visible;
     background: var(--db-bg);
     color: var(--db-text);
     padding: 0 40px;
@@ -372,12 +372,26 @@
 .db-showcase-container {
     padding-bottom: 40px;
     padding: 0 5px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .db-showcase-wrapper {
     display: flex;
     flex-direction: column;
     gap: 32px;
+    width: 100%;
+}
+
+.db-category-container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.db-main {
+    width: 100%;
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 /* Category Header */
@@ -385,7 +399,9 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 16px;
+    width: 15%;
+    box-sizing: border-box;
+    margin: 12px 0;
 }
 
 .db-category-title {
@@ -394,18 +410,22 @@
     font-weight: 600;
     white-space: nowrap;
     margin: 0;
+    flex-shrink: 0;
 }
 
 .db-category-divider {
-    flex: 1;
     height: 1px;
+    flex: 1;
     background: rgba(255,255,255,0.06);
+    flex-grow: 1;
 }
 
 .db-category-count {
     color: #64748b;
     font-size: 0.8rem;
     font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Badge Grid */
@@ -413,6 +433,8 @@
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (max-width: 1200px) { .db-badge-grid { grid-template-columns: repeat(5, 1fr); } }
@@ -441,7 +463,7 @@
     border: 1px solid #22c55e;
     box-shadow: 0 0 0 1px #22c55e, 0 4px 20px rgba(34,197,94,0.15);
     transform: translateY(-2px);
-    z-index: 10;
+    z-index: 9999;
 }
 
 .db-badge-locked {
@@ -476,7 +498,7 @@
 .db-badge-tooltip {
     position: absolute;
     pointer-events: none;
-    z-index: 999;
+    z-index: 99999;
     opacity: 0;
     bottom: calc(100% + 0.5rem);
     left: 50%;

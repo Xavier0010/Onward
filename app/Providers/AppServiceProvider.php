@@ -23,7 +23,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // URL::forceScheme('https');
         View::composer('*', function ($view) {
             $tables = DB::select("
                 SELECT name from sqlite_master

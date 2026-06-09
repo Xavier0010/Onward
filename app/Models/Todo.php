@@ -29,6 +29,8 @@ class Todo extends Model
         'completed_at',
         'priority', // 1 low, 2 medium, 3 high
         'status',  // 1 pending, 2 on progress, 3 completed
+        'file_path',
+        'original_filename',
     ];
 
     protected $casts = [

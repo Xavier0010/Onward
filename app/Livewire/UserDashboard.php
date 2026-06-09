@@ -4,38 +4,114 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Models\User;
-use App\Models\Todo;
+use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+
+use App\Http\Controllers\Api\User\UserDashboardController;
+use App\Http\Controllers\Api\User\UserTodoController;
+use App\Http\Controllers\Api\User\FriendController;
 
 class UserDashboard extends Component
 {
-    // Index
-
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     protected $paginationTheme = 'tailwind';
 
     public $searchQuery = '';
-    public $filterPriority = '';
-    public $filterStatus = '';
+    public $showFilterModal = false;
+
+    public $sortBy = 'created_at';
+    public $sortDir = 'desc';
+
+    public $filterStatuses = [];
+    public $filterPriorities = [];
+    public $filterDateFrom = null;
+    public $filterDateTo = null;
+
     public $showTaskModal = false;
     public $showDetailsModal = false;
+    public $showConfirmModal = false;
+
+    public $confirmAction = '';
+    public $confirmTitle = '';
+    public $confirmMessage = '';
+    public $confirmParam = null;
 
     public $selectedTask = null;
 
-    public $quote = [
-        'text' => 'Action is the foundational key to all success.',
-        'author' => 'Pablo Picasso',
-    ];
+    public $quote;
+    public $totalXp = 0;
+    public $weeklyXp = 0;
+    public $availableXp = 0;
 
-    public $leaderboard = [
-        ['rank' => 1, 'name' => 'PixelNinja', 'xp' => 2840, 'medal' => 'gold', 'avatar' => 'PN', 'color' => '#22c55e'],
-        ['rank' => 2, 'name' => 'CodeWizard', 'xp' => 2615, 'medal' => 'silver', 'avatar' => 'CW', 'color' => '#6366f1'],
-        ['rank' => 3, 'name' => 'TaskMaster', 'xp' => 2390, 'medal' => 'bronze', 'avatar' => 'TM', 'color' => '#f59e0b'],
-        ['rank' => 4, 'name' => 'ByteHunter', 'xp' => 2150, 'medal' => null, 'avatar' => 'BH', 'color' => '#ec4899'],
-        ['rank' => 5, 'name' => 'DevStar99', 'xp' => 1980, 'medal' => null, 'avatar' => 'DS', 'color' => '#f97316'],
-    ];
+    // Dashboard stats (loaded from API)
+    public $totalTasks = 0;
+    public $completedTasks = 0;
+    public $activeTasks = 0;
+    public $highPriority = 0;
+    public $streak = 0;
+
+    public function mount()
+    {
+        $this->refreshQuote();
+        $this->loadDashboardData();
+    }
+
+    /**
+     * Helper: call an API controller method following existing pattern
+     */
+    private function apiRequest($controllerClass, $method, $httpMethod = 'GET', $data = [], $routeParams = [])
+    {
+        $files = [];
+        if (!empty($data['_files'])) {
+            foreach ($data['_files'] as $key => $fileObj) {
+                if ($fileObj) {
+                    $files[$key] = $fileObj;
+                }
+            }
+            unset($data['_files']);
+        }
+
+        $request = Request::create('/api/placeholder', $httpMethod, $data, [], $files);
+        $request->setUserResolver(fn() => Auth::user());
+        
+        $controller = new $controllerClass();
+
+        if (!empty($routeParams)) {
+            $response = $controller->$method($request, ...$routeParams);
+        } else {
+            $response = $controller->$method($request);
+        }
+        
+        return json_decode($response->getContent(), true);
+    }
+
+    /**
+     * Load dashboard stats from API
+     */
+    private function loadDashboardData()
+    {
+        $result = $this->apiRequest(UserDashboardController::class, 'index');
+        
+        if ($result['success'] ?? false) {
+            $data = $result['data'];
+            $this->streak = $data['current_streak'];
+            $this->totalTasks = $data['total_tasks'];
+            $this->completedTasks = $data['completed_tasks'];
+            $this->activeTasks = $data['active_tasks'];
+            $this->highPriority = $data['high_priority'];
+            $this->totalXp = $data['total_xp'];
+            $this->weeklyXp = $data['weekly_xp'];
+            $this->availableXp = $data['available_xp'];
+        }
+    }
+
+    public function refreshQuote()
+    {
+        $quotes = config('quotes');
+        $this->quote = $quotes[array_rand($quotes)];
+    }
 
     /**
      * Reset pagination when filters change
@@ -45,97 +121,119 @@ class UserDashboard extends Component
         $this->resetPage();
     }
 
-    public function updatingFilterPriority()
+    public function resetFilters()
     {
+        $this->sortBy = 'created_at';
+        $this->sortDir = 'desc';
+        $this->filterStatuses = [];
+        $this->filterPriorities = [];
+        $this->filterDateFrom = null;
+        $this->filterDateTo = null;
         $this->resetPage();
     }
 
-    public function updatingFilterStatus()
+    public function applyFilters()
     {
+        $this->showFilterModal = false;
         $this->resetPage();
     }
 
     /**
-     * Main query
+     * Main task query — still using Eloquent for pagination support
+     * (API returns full list; pagination is more practical with Query Builder)
      */
-
-    public function getStreakProperty()
-    {
-        return Auth::user()->streak_count;
-    }
-
     public function getTasksQueryProperty()
     {
-        return Todo::query()
-
+        return \App\Models\Todo::query()
             ->where('user_id', Auth::id())
-
             ->when($this->searchQuery, function ($query) {
                 $query->where('task', 'like', '%' . $this->searchQuery . '%');
             })
-
-            ->when($this->filterPriority, function ($query) {
-                $query->where('priority', $this->filterPriority);
+            ->when(!empty($this->filterPriorities), function ($query) {
+                $query->whereIn('priority', $this->filterPriorities);
             })
-
-            ->when($this->filterStatus, function ($query) {
-                $query->where('status', $this->filterStatus);
+            ->when(!empty($this->filterStatuses), function ($query) {
+                $query->whereIn('status', $this->filterStatuses);
             })
-
-            ->latest();
+            ->when($this->filterDateFrom, function ($query) {
+                $query->whereDate('end_date', '>=', $this->filterDateFrom);
+            })
+            ->when($this->filterDateTo, function ($query) {
+                $query->whereDate('end_date', '<=', $this->filterDateTo);
+            })
+            ->orderBy($this->sortBy, $this->sortDir);
     }
 
     /**
-     * Statistics
+     * Load leaderboard from friend API
      */
-    public function getTotalTasksProperty()
+    public function getLeaderboardProperty()
     {
-        return Todo::where('user_id', Auth::id())->count();
-    }
+        $result = $this->apiRequest(FriendController::class, 'leaderboard', 'GET', ['type' => 'xp']);
+        
+        if ($result['success'] ?? false) {
+            $data = $result['data'];
+            $allEntries = collect($data)->map(function ($entry, $index) {
+                $medal = null;
+                $rank = $entry['rank'];
+                if ($rank === 1) $medal = 'gold';
+                elseif ($rank === 2) $medal = 'silver';
+                elseif ($rank === 3) $medal = 'bronze';
 
-    public function getCompletedTasksProperty()
-    {
-        return Todo::where('user_id', Auth::id())
-            ->where('status', 3)
-            ->count();
-    }
+                $colors = ['#22c55e', '#6366f1', '#f59e0b', '#ec4899', '#f97316', '#3b82f6', '#8b5cf6'];
+                $initials = strtoupper(substr($entry['first_name'], 0, 1) . substr($entry['last_name'], 0, 1));
 
-    public function getActiveTasksProperty()
-    {
-        return Todo::where('user_id', Auth::id())
-            ->whereIn('status', [1, 2])
-            ->count();
-    }
-
-    public function getHighPriorityProperty()
-    {
-        return Todo::where('user_id', Auth::id())
-            ->where('priority', 3)
-            ->count();
+                return [
+                    'rank' => $rank,
+                    'name' => $entry['is_current_user'] ? 'You' : $entry['full_name'],
+                    'xp' => $entry['value'],
+                    'medal' => $medal,
+                    'avatar' => $initials,
+                    'color' => $colors[$index % count($colors)],
+                ];
+            });
+            return $allEntries->toArray();
+        }
+        
+        return [];
     }
 
     /**
-     * Toggle complete status
+     * Toggle complete status via API
      */
     public function toggleTask($taskId)
     {
-        $task = Todo::where('user_id', Auth::id())
-            ->findOrFail($taskId);
+        $this->apiRequest(UserTodoController::class, 'toggle', 'PUT', [], [$taskId]);
+        $this->loadDashboardData();
+    }
 
-        if ($task->status == 3) {
-
-            // back to pending
-            $task->status = 1;
-            $task->completed_at = null;
-
+    public function rollPriority($taskId)
+    {
+        $task = \App\Models\Todo::where('user_id', Auth::id())->findOrFail($taskId);
+        if ($task->priority == 3) {
+            $task->priority = 1;
+        } elseif ($task->priority == 1) {
+            $task->priority = 2;
         } else {
-
-            // completed
-            $task->status = 3;
-            $task->completed_at = now();
+            $task->priority = 3;
         }
-
         $task->save();
+        $this->loadDashboardData();
+    }
+
+    public function rollStatus($taskId)
+    {
+        $task = \App\Models\Todo::where('user_id', Auth::id())->findOrFail($taskId);
+        if ($task->status == 1) {
+            $task->status = 2;
+        } else {
+            if ($task->status == 3) {
+                $task->completed_at = null;
+            }
+            $task->status = 1;
+        }
+        $task->save();
+        $this->loadDashboardData();
     }
 
     public function render()
@@ -147,10 +245,12 @@ class UserDashboard extends Component
             'completedTasks' => $this->completedTasks,
             'activeTasks' => $this->activeTasks,
             'highPriority' => $this->highPriority,
+            'leaderboard' => $this->leaderboard,
         ]);
     }
 
-    // Create
+    // ── Create / Edit Task ──
+
     public $taskId = null;
     public $task = '';
     public $description = '';
@@ -158,6 +258,7 @@ class UserDashboard extends Component
     public $status = 1;
     public $start_date;
     public $end_date;
+    public $file;
 
     protected $rules = [
         'task' => 'required|string|max:255',
@@ -166,25 +267,26 @@ class UserDashboard extends Component
         'status' => 'required|integer|in:1,2,3',
         'start_date' => 'nullable|date',
         'end_date' => 'nullable|date|after_or_equal:start_date',
+        'file' => 'nullable|file|max:10240|mimes:jpeg,jpg,png,xlsx,zip,txt,md,csv,doc,docx,ppt,pptx,pdf', // 10MB
     ];
 
     public function createTask()
     {
         $this->validate();
 
-        Todo::create([
-            'user_id' => Auth::id(),
+        $this->apiRequest(UserTodoController::class, 'store', 'POST', [
             'task' => $this->task,
             'description' => $this->description,
             'priority' => $this->priority,
             'status' => $this->status,
             'start_date' => $this->start_date,
             'end_date' => $this->end_date,
+            '_files' => ['file' => $this->file],
         ]);
 
         $this->resetTaskForm();
-
         $this->showTaskModal = false;
+        $this->loadDashboardData();
 
         session()->flash('success', 'Task created successfully.');
     }
@@ -192,7 +294,6 @@ class UserDashboard extends Component
     public function openCreateModal()
     {
         $this->resetTaskForm();
-
         $this->showTaskModal = true;
     }
 
@@ -203,7 +304,7 @@ class UserDashboard extends Component
 
     public function editTask($id)
     {
-        $task = Todo::where('user_id', Auth::id())
+        $task = \App\Models\Todo::where('user_id', Auth::id())
             ->findOrFail($id);
 
         $this->taskId = $task->id;
@@ -215,6 +316,7 @@ class UserDashboard extends Component
 
         $this->start_date = optional($task->start_date)->format('Y-m-d');
         $this->end_date = optional($task->end_date)->format('Y-m-d');
+        $this->file = null;
 
         $this->showTaskModal = true;
     }
@@ -223,28 +325,26 @@ class UserDashboard extends Component
     {
         $this->validate();
 
-        $task = Todo::where('user_id', Auth::id())
-            ->findOrFail($this->taskId);
-
-        $task->update([
+        $this->apiRequest(UserTodoController::class, 'update', 'PUT', [
             'task' => $this->task,
             'description' => $this->description,
             'priority' => $this->priority,
             'status' => $this->status,
             'start_date' => $this->start_date,
             'end_date' => $this->end_date,
-        ]);
+            '_files' => ['file' => $this->file],
+        ], [$this->taskId]);
 
         $this->resetTaskForm();
-
         $this->showTaskModal = false;
+        $this->loadDashboardData();
 
         session()->flash('success', 'Task updated successfully.');
     }
 
     public function openDetailsModal($id)
     {
-        $this->selectedTask = Todo::where('user_id', Auth::id())
+        $this->selectedTask = \App\Models\Todo::where('user_id', Auth::id())
             ->findOrFail($id);
 
         $this->showDetailsModal = true;
@@ -253,18 +353,32 @@ class UserDashboard extends Component
     public function closeDetailsModal()
     {
         $this->showDetailsModal = false;
-
         $this->selectedTask = null;
     }
 
     public function deleteTask($id)
     {
-        $task = Todo::where('user_id', Auth::id())
-            ->findOrFail($id);
-
-        $task->delete();
+        $this->apiRequest(UserTodoController::class, 'destroy', 'DELETE', [], [$id]);
+        $this->loadDashboardData();
 
         session()->flash('success', 'Task deleted successfully.');
+    }
+
+    public function openConfirmModal($action, $title, $message, $param = null)
+    {
+        $this->confirmAction = $action;
+        $this->confirmTitle = $title;
+        $this->confirmMessage = $message;
+        $this->confirmParam = $param;
+        $this->showConfirmModal = true;
+    }
+
+    public function executeConfirmAction()
+    {
+        if ($this->confirmAction === 'deleteTask' && $this->confirmParam) {
+            $this->deleteTask($this->confirmParam);
+        }
+        $this->showConfirmModal = false;
     }
 
     public function resetTaskForm()
@@ -277,6 +391,7 @@ class UserDashboard extends Component
             'status',
             'start_date',
             'end_date',
+            'file',
         ]);
 
         $this->priority = 1;

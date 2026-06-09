@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ asset('OnwardLogo.png') }}">
     <title>Profile - Onward</title>
     
     <!-- Fonts -->
@@ -12,7 +13,7 @@
 </head>
 <body class="bg-[#0f1117] text-white antialiased m-0 p-0 overflow-x-hidden">
 
-    @livewire('user-profile')
+    @livewire('user-profile', ['userId' => $id ?? null])
 
     @livewireScripts
 </body>

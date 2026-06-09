@@ -1,9 +1,19 @@
 <div class="db-layout">
-    <x-sidebar />
+    <x-sidebar active="dashboard"/>
 
     <div class="db-root">
-        <header class="db-header">
+        <header class="db-header flex justify-between items-center w-full mb-[20px]">
             <h1 class="db-header-title">Dashboard</h1>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-[#1a1d27] border border-[#2a2d3e] px-4 py-2 rounded-xl text-[#22c55e] font-bold shadow-sm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                    <span>{{ $weeklyXp }} XP (Weekly)</span>
+                </div>
+                <div class="flex items-center gap-2 bg-[#1a1d27] border border-[#2a2d3e] px-4 py-2 rounded-xl text-[#f59e0b] font-bold shadow-sm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                    <span>{{ $availableXp }} XP (Available)</span>
+                </div>
+            </div>
         </header>
 
 
@@ -56,9 +66,9 @@
                     <h2 class="db-todo-title m-0">To-do</h2>
                     <button
                         wire:click="openCreateModal"
-                        class="bg-[#22c55e] hover:bg-[#1ea951] text-white px-3 py-1.5 rounded-lg font-medium transition text-sm flex items-center gap-1.5 cursor-pointer"
+                        class="new-task-btn"
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2">
                             <path d="M12 5v14M5 12h14"/>
                         </svg>
@@ -79,24 +89,13 @@
                             />
                         </div>
                         <div class="db-filter-group">
-                            <div class="db-filter-wrap">
-                                <select wire:model.live="filterPriority" class="db-filter">
-                                    <option value="">Priority</option>
-                                    <option value="high">High</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="low">Low</option>
-                                </select>
-                                <svg class="db-filter-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                            </div>
-                            <div class="db-filter-wrap">
-                                <select wire:model.live="filterStatus" class="db-filter">
-                                    <option value="">Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                                <svg class="db-filter-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                            </div>
+                            <button
+                                wire:click="$set('showFilterModal', true)"
+                                class="sort-filter-btn"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                                Sort & Filter
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -111,8 +110,9 @@
                         @endphp
 
                         <div
-                            class="db-task-item db-priority-{{ $task->priority }} {{ $isCompleted ? 'db-task-done' : '' }}"
+                            class="db-task-item db-priority-{{ $task->priority }} {{ $isCompleted ? 'db-task-done' : '' }} cursor-pointer"
                             wire:key="task-{{ $task->id }}"
+                            wire:click="openDetailsModal({{ $task->id }})"
                         >
 
                             {{-- LEFT SIDE --}}
@@ -120,7 +120,7 @@
 
                                 {{-- Check Button --}}
                                 <button
-                                    wire:click="toggleTask({{ $task->id }})"
+                                    wire:click.stop="toggleTask({{ $task->id }})"
                                     class="db-task-check {{ $isCompleted ? 'db-check-done' : '' }}"
                                     aria-label="Toggle task"
                                 >
@@ -139,7 +139,35 @@
                                     </span>
 
                                     <span class="db-task-due">
-                                        {{ optional($task->end_date)->format('M d, Y') }}
+                                        @if($task->end_date)
+                                            @php
+                                                $now = now()->startOfDay();
+                                                $end = $task->end_date->startOfDay();
+                                                $isPast = $now->greaterThan($end);
+                                                
+                                                $diff = $now->diff($end);
+                                                $years = $diff->y;
+                                                $months = $diff->m;
+                                                $days = $diff->d;
+                                                
+                                                $parts = [];
+                                                if($years > 0) $parts[] = $years . ' ' . Str::plural('year', $years);
+                                                if($months > 0) $parts[] = $months . ' ' . Str::plural('month', $months);
+                                                if($days > 0 && $years == 0) $parts[] = $days . ' ' . Str::plural('day', $days); // Only show days if years = 0, or just show it all. The user said "1 year 15 days ago", wait, "1 month and 3 days left", "1 year 15 days ago".
+                                                // Actually let's just push all non-zero.
+                                                $parts = [];
+                                                if($years > 0) $parts[] = $years . ' ' . ($years > 1 ? 'years' : 'year');
+                                                if($months > 0) $parts[] = $months . ' ' . ($months > 1 ? 'months' : 'month');
+                                                if($days > 0) $parts[] = $days . ' ' . ($days > 1 ? 'days' : 'day');
+                                                
+                                                if(empty($parts)) {
+                                                    $diffStr = 'Today';
+                                                } else {
+                                                    $diffStr = implode(' and ', $parts) . ($isPast ? ' ago' : ' left');
+                                                }
+                                            @endphp
+                                            Ends in: {{ $task->end_date->format('M d, Y') }}, {{ $diffStr }}
+                                        @endif
                                     </span>
                                 </div>
 
@@ -147,11 +175,26 @@
 
                             {{-- Status --}}
                             <div class="flex items-center gap-3">
+                                @if($task->priority == 3)
+                                    <button type="button" wire:click.stop="rollPriority({{ $task->id }})" class="db-badge db-badge-high cursor-pointer border-0">
+                                        High
+                                    </button>
+
+                                @elseif($task->priority == 2)
+                                    <button type="button" wire:click.stop="rollPriority({{ $task->id }})" class="db-badge db-badge-medium cursor-pointer border-0">
+                                        Medium
+                                    </button>
+
+                                @else
+                                    <button type="button" wire:click.stop="rollPriority({{ $task->id }})" class="db-badge db-badge-low cursor-pointer border-0">
+                                        Low
+                                    </button>
+                                @endif
 
                                 @if($task->status == 2)
-                                    <span class="db-badge db-badge-progress">
+                                    <button type="button" wire:click.stop="rollStatus({{ $task->id }})" class="db-badge db-badge-progress cursor-pointer border-0">
                                         In Progress
-                                    </span>
+                                    </button>
 
                                 @elseif($task->status == 3)
                                     <span class="db-badge db-badge-done">
@@ -159,30 +202,17 @@
                                     </span>
 
                                 @else
-                                    <span class="db-badge db-badge-pending">
+                                    <button type="button" wire:click.stop="rollStatus({{ $task->id }})" class="db-badge db-badge-pending cursor-pointer border-0">
                                         Pending
-                                    </span>
+                                    </button>
                                 @endif
 
                                 {{-- Hover Actions --}}
                                 <div class="db-task-actions">
 
-                                    {{-- Details --}}
-                                    <button
-                                        wire:click="openDetailsModal({{ $task->id }})"
-                                        class="db-icon-btn db-view-btn"
-                                        title="View Details"
-                                    >
-                                        <svg width="16" height="16" viewBox="0 0 24 24"
-                                             fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                            <circle cx="12" cy="12" r="3"/>
-                                        </svg>
-                                    </button>
-
                                     {{-- Edit --}}
                                     <button
-                                        wire:click="editTask({{ $task->id }})"
+                                        wire:click.stop="editTask({{ $task->id }})"
                                         class="db-icon-btn db-edit-btn"
                                         title="Edit Task"
                                     >
@@ -195,8 +225,7 @@
 
                                     {{-- Delete --}}
                                     <button
-                                        wire:click="deleteTask({{ $task->id }})"
-                                        wire:confirm="Delete this task?"
+                                        wire:click.stop="openConfirmModal('deleteTask', 'Delete Task?', 'Are you sure you want to delete this task? This action cannot be undone.', {{ $task->id }})"
                                         class="db-icon-btn db-delete-btn"
                                         title="Delete Task"
                                     >
@@ -253,6 +282,13 @@
                         @endif
                 </div>
 
+                {{-- Quote --}}
+                <div class="db-quote-card cursor-pointer" wire:click="refreshQuote" wire:poll.300s="refreshQuote">
+                    <svg class="db-quote-mark" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zm12 0c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>
+                    <p class="db-quote-text">{{ $quote['text'] }}</p>
+                    <p class="db-quote-author">— {{ $quote['author'] }}</p>
+                </div>
+
                 {{-- Leaderboard --}}
                 <div class="db-leaderboard">
                     <div class="db-lb-header">
@@ -262,37 +298,8 @@
                         </div>
                         <span class="db-lb-period">Weekly XP</span>
                     </div>
-                    <div class="db-lb-list">
-                        @foreach($leaderboard as $entry)
-                            <div class="db-lb-row {{ $entry['rank'] <= 3 ? 'db-lb-top3' : '' }}">
-                                <div class="db-lb-rank">
-                                    @if($entry['medal'] === 'gold')
-                                        <span class="db-medal db-medal-gold">🥇</span>
-                                    @elseif($entry['medal'] === 'silver')
-                                        <span class="db-medal db-medal-silver">🥈</span>
-                                    @elseif($entry['medal'] === 'bronze')
-                                        <span class="db-medal db-medal-bronze">🥉</span>
-                                    @else
-                                        <span class="db-rank-num">{{ $entry['rank'] }}</span>
-                                    @endif
-                                </div>
-                                <div class="db-lb-avatar" style="background: {{ $entry['color'] }}20; border-color: {{ $entry['color'] }}40; color: {{ $entry['color'] }}">
-                                    {{ $entry['avatar'] }}
-                                </div>
-                                <span class="db-lb-name">{{ $entry['name'] }}</span>
-                                <span class="db-lb-xp {{ $entry['rank'] <= 3 ? 'db-xp-highlight' : '' }}">
-                                    {{ number_format($entry['xp']) }}
-                                </span>
-                            </div>
-                        @endforeach
-                    </div>
                 </div>
-
-                {{-- Quote --}}
-                <div class="db-quote-card">
-                    <svg class="db-quote-mark" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zm12 0c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>
-                    <p class="db-quote-text">{{ $quote['text'] }}</p>
-                    <p class="db-quote-author">— {{ $quote['author'] }}</p>
+                <div class="db-lb-list">
                 </div>
 
             </div>
@@ -308,7 +315,7 @@
                         {{ $taskId ? 'Edit Task' : 'Create Task' }}
                     </h2>
         
-                    <button wire:click="closeTaskModal" class="text-gray-400 hover:text-white">
+                    <button wire:click="closeTaskModal" class="text-gray-400 hover:text-white cursor-pointer">
                         ✕
                     </button>
                 </div>
@@ -318,59 +325,75 @@
                     <div class="space-y-4">
         
                         <div>
-                            <label class="text-sm text-gray-400 block mb-1">
+                            <label class="block text-[10px] text-gray-400 mb-1 font-medium uppercase tracking-wider">
                                 Task
                             </label>
         
                             <input
                                 type="text"
                                 wire:model="task"
-                                class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-4 py-3 text-white"
+                                class="w-full bg-[#141923] border border-[#343b4f] text-white rounded-lg py-3 px-4 transition-all duration-200 focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e]"
                             >
+                            @error('task') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
         
                         <div>
-                            <label class="text-sm text-gray-400 block mb-1">
+                            <label class="block text-[10px] text-gray-400 mb-1 font-medium uppercase tracking-wider">
                                 Description
                             </label>
         
                             <textarea
                                 wire:model="description"
                                 rows="4"
-                                class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-4 py-3 text-white"
+                                class="w-full bg-[#141923] border border-[#343b4f] text-white rounded-lg py-3 px-4 transition-all duration-200 focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e]"
                             ></textarea>
+                            @error('description') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
         
                         <div class="grid grid-cols-2 gap-4">
         
                             <div>
-                                <label class="text-sm text-gray-400 block mb-1">
+                                <label class="block text-[10px] text-gray-400 mb-1 font-medium uppercase tracking-wider">
                                     Priority
                                 </label>
         
-                                <select
-                                    wire:model="priority"
-                                    class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-4 py-3 text-white"
-                                >
-                                    <option value="1">Low</option>
-                                    <option value="2">Medium</option>
-                                    <option value="3">High</option>
-                                </select>
+                                <div class="relative">
+                                    <select
+                                        wire:model="priority"
+                                        class="w-full bg-[#141923] border border-[#343b4f] text-white rounded-lg py-3 px-4 transition-all duration-200 focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e] cursor-pointer appearance-none"
+                                    >
+                                        <option value="1">Low</option>
+                                        <option value="2">Medium</option>
+                                        <option value="3">High</option>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                    </div>
+                                </div>
+                                @error('priority') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                             </div>
         
                             <div>
-                                <label class="text-sm text-gray-400 block mb-1">
+                                <label class="block text-[10px] text-gray-400 mb-1 font-medium uppercase tracking-wider">
                                     Status
                                 </label>
         
-                                <select
-                                    wire:model="status"
-                                    class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-4 py-3 text-white"
-                                >
-                                    <option value="1">Pending</option>
-                                    <option value="2">In Progress</option>
-                                    <option value="3">Completed</option>
-                                </select>
+                                <div class="relative">
+                                    <select
+                                        wire:model="status"
+                                        class="w-full bg-[#141923] border border-[#343b4f] text-white rounded-lg py-3 px-4 transition-all duration-200 focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e] cursor-pointer appearance-none"
+                                    >
+                                        <option value="1">Pending</option>
+                                        <option value="2">In Progress</option>
+                                        @if(!$taskId)
+                                            <option value="3">Completed</option>
+                                        @endif
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                    </div>
+                                </div>
+                                @error('status') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                             </div>
         
                         </div>
@@ -378,29 +401,59 @@
                         <div class="grid grid-cols-2 gap-4">
         
                             <div>
-                                <label class="text-sm text-gray-400 block mb-1">
+                                <label class="block text-[10px] text-gray-400 mb-1 font-medium uppercase tracking-wider">
                                     Start Date
                                 </label>
         
                                 <input
                                     type="date"
                                     wire:model="start_date"
-                                    class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-4 py-3 text-white"
+                                    class="w-full bg-[#141923] border border-[#343b4f] text-white rounded-lg py-3 px-4 transition-all duration-200 focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e] cursor-text"
+                                    style="color-scheme: dark;"
                                 >
+                                @error('start_date') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                             </div>
         
                             <div>
-                                <label class="text-sm text-gray-400 block mb-1">
+                                <label class="block text-[10px] text-gray-400 mb-1 font-medium uppercase tracking-wider">
                                     End Date
                                 </label>
         
                                 <input
                                     type="date"
                                     wire:model="end_date"
-                                    class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-4 py-3 text-white"
+                                    class="w-full bg-[#141923] border border-[#343b4f] text-white rounded-lg py-3 px-4 transition-all duration-200 focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e] cursor-text"
+                                    style="color-scheme: dark;"
                                 >
+                                @error('end_date') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                             </div>
         
+                        </div>
+
+                        <div>
+                            <div class="flex items-center gap-2 mb-1 relative group">
+                                <label class="block text-[10px] text-gray-400 font-medium uppercase tracking-wider mb-0">
+                                    Attachment (Max 10MB)
+                                </label>
+                                <svg class="w-3.5 h-3.5 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <!-- Tooltip -->
+                                <div class="absolute bottom-full left-0 mb-2 hidden group-hover:block w-64 bg-[#1f2235] text-xs text-gray-300 p-3 rounded-lg border border-[#2a2d3e] shadow-xl z-50">
+                                    <span class="font-semibold text-white block mb-1">Supported Extensions:</span>
+                                    Images: jpeg, jpg, png<br>
+                                    Docs: doc, docx, pdf, txt, md, csv, xlsx, ppt, pptx<br>
+                                    Archives: zip
+                                </div>
+                            </div>
+        
+                            <input
+                                type="file"
+                                wire:model="file"
+                                accept=".jpeg,.jpg,.png,.xlsx,.zip,.txt,.md,.csv,.doc,.docx,.ppt,.pptx,.pdf"
+                                class="w-full bg-[#141923] border border-[#343b4f] text-white rounded-lg py-3 px-4 transition-all duration-200 focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e] file:bg-[#2a2d3e] file:border-0 file:text-white file:rounded file:mr-3 file:cursor-pointer"
+                            >
+                            @error('file') <span class="text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
         
                     </div>
@@ -410,14 +463,14 @@
                         <button
                             type="button"
                             wire:click="closeTaskModal"
-                            class="px-4 py-2 rounded-lg border border-[#2a2d3e] text-gray-300"
+                            class="px-4 py-2 rounded-lg border border-[#2a2d3e] text-gray-300 cursor-pointer hover:bg-[#2a2d3e]"
                         >
                             Cancel
                         </button>
         
                         <button
                             type="submit"
-                            class="px-4 py-2 rounded-lg bg-[#22c55e] text-white"
+                            class="px-4 py-2 rounded-lg bg-[#22c55e] text-white cursor-pointer hover:bg-[#1ea951]"
                         >
                             {{ $taskId ? 'Update Task' : 'Create Task' }}
                         </button>
@@ -441,7 +494,7 @@
                         Task Details
                     </h2>
 
-                    <button wire:click="closeDetailsModal" class="text-gray-400 hover:text-white">
+                    <button wire:click="closeDetailsModal" class="text-gray-400 hover:text-white cursor-pointer">
                         ✕
                     </button>
                 </div>
@@ -512,16 +565,166 @@
 
                     <div>
                         <div class="text-gray-500 mb-1">Completed At</div>
-
                         <div class="text-white">
                             {{ optional($selectedTask->completed_at)->format('M d, Y h:i A') ?: 'Not completed yet' }}
                         </div>
                     </div>
 
+                    @if($selectedTask->file_path)
+                    <div>
+                        <div class="text-gray-500 mb-1">Attachment</div>
+                        <div class="text-white mt-2">
+                            @php
+                                $ext = strtolower(pathinfo($selectedTask->file_path, PATHINFO_EXTENSION));
+                                $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp']);
+                            @endphp
+                            
+                            @if($isImage)
+                                <div class="mb-3">
+                                    <a href="{{ Storage::url($selectedTask->file_path) }}" target="_blank">
+                                        <img src="{{ Storage::url($selectedTask->file_path) }}" class="w-full max-h-[250px] object-cover rounded-lg border border-[#2a2d3e] hover:opacity-90 transition-opacity cursor-pointer" alt="Attachment Preview">
+                                    </a>
+                                </div>
+                            @endif
+
+                            <a href="{{ Storage::url($selectedTask->file_path) }}" download="{{ $selectedTask->original_filename }}" class="inline-flex items-center gap-2 bg-[#1f2235] border border-[#343b4f] px-4 py-2 rounded-lg text-[#22c55e] hover:bg-[#2a2d3e] transition-colors" target="_blank">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span class="truncate max-w-[200px]">{{ $selectedTask->original_filename ?: 'Download File' }}</span>
+                            </a>
+                        </div>
+                    </div>
+                    @endif
+
                 </div>
 
             </div>
 
+        </div>
+        @endif
+
+        @if($showFilterModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div class="w-full max-w-xl bg-[#1a1d27] border border-[#2a2d3e] rounded-2xl p-6 shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">Sort & Filter</h2>
+                    <button wire:click="$set('showFilterModal', false)" class="text-gray-400 hover:text-white cursor-pointer transition">✕</button>
+                </div>
+
+                <div class="space-y-6">
+                    {{-- Sort Section --}}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4 border-b border-[#2a2d3e] pb-2">Sort By</h3>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <div class="flex flex-col gap-3">
+                                    <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="radio" wire:model="sortBy" value="task" class="text-[#22c55e] focus:ring-[#22c55e] bg-[#0f1117] border-[#2a2d3e] h-4 w-4"> Name
+                                    </label>
+                                    <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="radio" wire:model="sortBy" value="status" class="text-[#22c55e] focus:ring-[#22c55e] bg-[#0f1117] border-[#2a2d3e] h-4 w-4"> Status
+                                    </label>
+                                    <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="radio" wire:model="sortBy" value="priority" class="text-[#22c55e] focus:ring-[#22c55e] bg-[#0f1117] border-[#2a2d3e] h-4 w-4"> Priority
+                                    </label>
+                                    <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="radio" wire:model="sortBy" value="start_date" class="text-[#22c55e] focus:ring-[#22c55e] bg-[#0f1117] border-[#2a2d3e] h-4 w-4"> Start Date
+                                    </label>
+                                    <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="radio" wire:model="sortBy" value="end_date" class="text-[#22c55e] focus:ring-[#22c55e] bg-[#0f1117] border-[#2a2d3e] h-4 w-4"> End Date
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-3 font-medium uppercase tracking-wider">Direction</label>
+                                <div class="flex flex-col gap-3">
+                                    <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="radio" wire:model="sortDir" value="asc" class="text-[#22c55e] focus:ring-[#22c55e] bg-[#0f1117] border-[#2a2d3e] h-4 w-4"> Ascending
+                                    </label>
+                                    <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="radio" wire:model="sortDir" value="desc" class="text-[#22c55e] focus:ring-[#22c55e] bg-[#0f1117] border-[#2a2d3e] h-4 w-4"> Descending
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Filters Section --}}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4 border-b border-[#2a2d3e] pb-2">Filters</h3>
+                        
+                        <div class="space-y-5">
+                            {{-- Status Filter --}}
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-2 font-medium">Status</label>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="checkbox" wire:model="filterStatuses" value="1" class="rounded border-[#2a2d3e] bg-[#0f1117] text-[#22c55e] focus:ring-[#22c55e] h-4 w-4">
+                                        Pending
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="checkbox" wire:model="filterStatuses" value="2" class="rounded border-[#2a2d3e] bg-[#0f1117] text-[#22c55e] focus:ring-[#22c55e] h-4 w-4">
+                                        In Progress
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="checkbox" wire:model="filterStatuses" value="3" class="rounded border-[#2a2d3e] bg-[#0f1117] text-[#22c55e] focus:ring-[#22c55e] h-4 w-4">
+                                        Done
+                                    </label>
+                                </div>
+                            </div>
+
+                            {{-- Priority Filter --}}
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-2 font-medium">Priority</label>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="checkbox" wire:model="filterPriorities" value="3" class="rounded border-[#2a2d3e] bg-[#0f1117] text-[#22c55e] focus:ring-[#22c55e] h-4 w-4">
+                                        High
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="checkbox" wire:model="filterPriorities" value="2" class="rounded border-[#2a2d3e] bg-[#0f1117] text-[#22c55e] focus:ring-[#22c55e] h-4 w-4">
+                                        Medium
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white transition">
+                                        <input type="checkbox" wire:model="filterPriorities" value="1" class="rounded border-[#2a2d3e] bg-[#0f1117] text-[#22c55e] focus:ring-[#22c55e] h-4 w-4">
+                                        Low
+                                    </label>
+                                </div>
+                            </div>
+
+                            {{-- End Date Range --}}
+                            <div>
+                                <label class="text-xs text-gray-500 block mb-2 font-medium">End Date Range</label>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <input type="date" wire:model="filterDateFrom" class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-2 text-white text-sm cursor-text focus:ring-[#22c55e] focus:border-[#22c55e]" placeholder="From">
+                                    <input type="date" wire:model="filterDateTo" class="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-2 text-white text-sm cursor-text focus:ring-[#22c55e] focus:border-[#22c55e]" placeholder="To">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-8 pt-5 border-t border-[#2a2d3e]">
+                    <button wire:click="resetFilters" class="px-5 py-2 rounded-lg border border-[#2a2d3e] text-gray-300 cursor-pointer hover:bg-[#2a2d3e] transition text-sm font-medium">
+                        Reset
+                    </button>
+                    <button wire:click="applyFilters" class="px-5 py-2 rounded-lg bg-[#22c55e] text-white cursor-pointer hover:bg-[#1ea951] transition shadow-lg shadow-green-500/20 text-sm font-medium">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        @if($showConfirmModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" wire:click.self="$set('showConfirmModal', false)">
+            <div class="w-full max-w-sm bg-[#1a1d27] border border-[#2a2d3e] rounded-2xl p-6">
+                <h2 class="text-xl font-bold text-white mb-2">{{ $confirmTitle }}</h2>
+                <p class="text-gray-400 mb-6">{{ $confirmMessage }}</p>
+                <div class="flex gap-3 justify-end">
+                    <button wire:click="$set('showConfirmModal', false)" class="px-4 py-2 rounded-lg border border-[#2a2d3e] text-gray-300 cursor-pointer hover:bg-[#2a2d3e]">Cancel</button>
+                    <button wire:click="executeConfirmAction" class="px-4 py-2 rounded-lg bg-[#ef4444] text-white cursor-pointer hover:bg-[#dc2626]">Confirm</button>
+                </div>
+            </div>
         </div>
         @endif
     </div>
@@ -534,6 +737,7 @@
 :root {
     --db-bg:          #0f1117;
     --db-surface:     #1a1d27;
+    --db-surface-sidebar: #141720;
     --db-surface2:    #1f2235;
     --db-border:      #2a2d3e;
     --db-text:        #e2e8f0;
@@ -545,6 +749,17 @@
     --db-low:         #6366f1;
     --db-radius:      12px;
     --db-radius-sm:   8px;
+}
+
+/* ── GENERIC DASHBOARD CARDS HOVER ── */
+.db-stat-card {
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.db-stat-card:hover {
+    border-color: rgba(34, 197, 94, 0.5);
+    transform: translateY(-2px);
+    cursor: default;
 }
 
 .db-layout {
@@ -568,8 +783,8 @@
 }
 
 .db-logo {
-    width: 44px;
-    height: 44px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
 }
 
@@ -641,11 +856,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    transition: border-color .2s, transform .2s;
-}
-.db-stat-card:hover {
-    border-color: #3a3d50;
-    transform: translateY(-1px);
 }
 
 .db-stat-info { display: flex; flex-direction: column; gap: 8px; }
@@ -673,6 +883,29 @@
 }
 
 /* ── TO-DO SECTION ── */
+.new-task-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: #22c55e;
+    color: #fff;
+
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.new-task-btn:hover {
+    background: #1ea951;
+}
+
 .db-todo {
     background: var(--db-surface);
     border: 1px solid var(--db-border);
@@ -750,6 +983,41 @@
     pointer-events: none;
 }
 
+.sort-filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    height: 38px;
+    padding: 0 16px;
+
+    border-radius: 8px;
+    border: 1px solid #2a2d3e;
+
+    background: #1f2235;
+    color: #fff;
+
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.new-task-btn,
+.sort-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 38px;
+    padding: 0 16px;
+
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 14px;
+
+    box-sizing: border-box;
+}
+
 /* ── TASK ITEMS ── */
 .db-task-list { flex: 1; display: flex; flex-direction: column; gap: 8px; justify-content: flex-start; overflow-y: auto; min-height: 0; padding-right: 4px; }
 
@@ -811,6 +1079,10 @@
 .db-badge-done     { background: #22c55e20; color: #22c55e; }
 .db-badge-pending  { background: #64748b20; color: #94a3b8; }
 
+.db-badge-high   { background: #ef444420; color: #ef4444; }
+.db-badge-medium { background: #eab30820; color: #eab308; }
+.db-badge-low    { background: #22c55e20; color: #22c55e; }
+
 .db-empty { text-align: center; color: var(--db-muted); padding: 32px 0; font-size: 14px; }
 
 /* ── SIDEBAR ── */
@@ -818,7 +1090,7 @@
 
 /* ── STREAK ── */
 .db-streak-card {
-    background: var(--db-surface);
+    background: var(--db-surface-sidebar);
     border: 1px solid var(--db-border);
     border-radius: var(--db-radius);
     padding: 24px;
@@ -827,6 +1099,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    cursor: default;
 }
 .db-streak-flame {
     display: flex;
@@ -837,12 +1110,12 @@
 }
 .db-flame-emoji { font-size: 70px; line-height: 1; }
 .db-streak-num  { font-size: 90px; font-weight: 900; color: var(--db-text); line-height: 1; }
-.db-streak-label { font-size: 11px; font-weight: 700; letter-spacing: .12   em; color: var(--db-muted); margin-bottom: 4px; }
+.db-streak-label { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--db-muted); margin-bottom: 4px; }
 .db-streak-sub   { font-size: 12px; color: var(--db-muted); }
 
 /* ── LEADERBOARD ── */
 .db-leaderboard {
-    background: var(--db-surface);
+    background: var(--db-surface-sidebar);
     border: 1px solid var(--db-border);
     border-radius: var(--db-radius);
     padding: 20px;
@@ -894,13 +1167,13 @@
 
 /* ── QUOTE ── */
 .db-quote-card {
-    background: var(--db-surface);
+    background: var(--db-surface-sidebar);
     border: 1px solid var(--db-border);
     border-radius: var(--db-radius);
     padding: 20px;
     position: relative;
 }
-.db-quote-mark { color: #2a2d3e; position: absolute; top: 14px; right: 14px; }
+.db-quote-mark { color: #2a2d3e; position: absolute; bottom: 10px; right: 10px; }
 .db-quote-text {
     font-size: 13px;
     line-height: 1.6;
@@ -925,15 +1198,19 @@
 
     opacity: 0;
     transform: translateX(6px);
+    max-width: 0;
+    overflow: hidden;
 
     transition:
         opacity .18s ease,
-        transform .18s ease;
+        transform .18s ease,
+        max-width .18s ease;
 }
 
 .db-task-item:hover .db-task-actions {
     opacity: 1;
     transform: translateX(0);
+    max-width: 150px;
 }
 
 .db-icon-btn {
@@ -996,4 +1273,23 @@
     .db-stats { grid-template-columns: 1fr 1fr; }
     .db-sidebar { grid-template-columns: 1fr; }
 }
+
+/* Pagination */
+.pagination-nav button,
+.pagination-nav span {
+    cursor: pointer;
+}
 </style>
+
+        @if($showConfirmModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" wire:click.self="$set('showConfirmModal', false)">
+            <div class="w-full max-w-sm bg-[#1a1d27] border border-[#2a2d3e] rounded-2xl p-6">
+                <h2 class="text-xl font-bold text-white mb-2">{{ $confirmTitle }}</h2>
+                <p class="text-gray-400 mb-6">{{ $confirmMessage }}</p>
+                <div class="flex gap-3 justify-end">
+                    <button wire:click="$set('showConfirmModal', false)" class="px-4 py-2 rounded-lg border border-[#2a2d3e] text-gray-300 cursor-pointer hover:bg-[#2a2d3e]">Cancel</button>
+                    <button wire:click="executeConfirmAction" class="px-4 py-2 rounded-lg bg-[#ef4444] text-white cursor-pointer hover:bg-[#dc2626]">Confirm</button>
+                </div>
+            </div>
+        </div>
+        @endif

@@ -23,7 +23,7 @@ class AchievementController extends Controller
                 "type" => $achievement->type,
                 "target_value" => $achievement->target_value,
                 "unlocked" => $unlocked ? true : false,
-                "earned_at" => $unlocked ? $unlocked->unlocked_at ?? $unlocked->created_at : null
+                "earned_at" => $unlocked ? ($unlocked->unlocked_at ?? $unlocked->created_at) : null
             ];
         });
 

@@ -19,8 +19,9 @@ class AuthController extends Controller
             "password" => "required|min:8|confirmed",
             "first_name" => "required",
             "last_name" => "required",
-            "sex" => "required|in:male,female",
-            "date_of_birth" => "required|date"
+            "gender" => "required|in:male,female",
+            "date_of_birth" => "required|date",
+            "nationality" => "nullable|string|max:100"
         ]);
 
         if ($validator->fails()) {

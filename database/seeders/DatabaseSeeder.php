@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('user1'),
             'first_name' => 'user1',
             'last_name' => 'user1',
-            'sex' => 'male',
+            'gender' => 'male',
             'date_of_birth' => '2000-01-01',
             'role' => 'user'
         ]);
@@ -39,9 +39,66 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin'),
             'first_name' => 'admin',
             'last_name' => 'admin',
-            'sex' => 'male',
+            'gender' => 'male',
             'date_of_birth' => '2000-01-01',
             'role' => 'admin'
+        ]);
+
+        // Dummy users for Friend testing
+        User::create([
+            'username' => 'user2',
+            'email' => 'user2@onward.com',
+            'password' => Hash::make('password'),
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'gender' => 'male',
+            'date_of_birth' => '2000-01-01',
+            'role' => 'user',
+            'streak_count' => 15,
+            'best_streak' => 20,
+            'nationality' => 'USA'
+        ]);
+
+        User::create([
+            'username' => 'user3',
+            'email' => 'user3@onward.com',
+            'password' => Hash::make('password'),
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'gender' => 'female',
+            'date_of_birth' => '1995-05-15',
+            'role' => 'user',
+            'streak_count' => 5,
+            'best_streak' => 8,
+            'nationality' => 'UK'
+        ]);
+
+        User::create([
+            'username' => 'user4',
+            'email' => 'user4@onward.com',
+            'password' => Hash::make('password'),
+            'first_name' => 'Bob',
+            'last_name' => 'Johnson',
+            'gender' => 'male',
+            'date_of_birth' => '1992-10-20',
+            'role' => 'user',
+            'streak_count' => 30,
+            'best_streak' => 45,
+            'nationality' => 'Canada'
+        ]);
+
+        User::create([
+            'username' => 'user5',
+            'email' => 'user5@onward.com',
+            'password' => Hash::make('password'),
+            'first_name' => 'Alice',
+            'last_name' => 'Williams',
+            'gender' => 'female',
+            'date_of_birth' => '1988-08-08',
+            'role' => 'user',
+            'streak_count' => 2,
+            'best_streak' => 10,
+            'nationality' => 'Australia'
         ]);
 
 
